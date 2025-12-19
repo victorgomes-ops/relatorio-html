@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Relatório de Horas excedentes - Semana 50</title>
+    <style>
+        :root { 
+            --pwr-dark: #002b5b; --pwr-blue: #3498db; --red: #e11d48; --yellow: #facc15; 
+            --bg: #f8fafc; --text: #1e293b; --border: #cbd5e1; 
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; color: var(--text); font-size: 12px; }
+        
+        /* Compact Header */
+        header { background: var(--pwr-dark); color: white; padding: 10px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header-content { display: flex; align-items: center; justify-content: center; gap: 15px; }
+        h1 { margin: 0; font-size: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* Navigation */
+        .nav { background: white; display: flex; justify-content: center; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+        .nav-btn { padding: 8px 20px; cursor: pointer; font-weight: 600; color: #64748b; border-bottom: 2px solid transparent; font-size: 11px; transition: 0.2s; }
+        .nav-btn.active { color: var(--pwr-blue); border-bottom-color: var(--pwr-blue); background: #f1f5f9; }
+
+        /* Main Layout */
+        .container { padding: 15px; max-width: 1200px; margin: auto; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* KPI Cards - Compact */
+        .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 15px; }
+        .kpi-card { background: white; padding: 8px; border: 1px solid var(--border); border-top: 3px solid var(--pwr-blue); text-align: center; border-radius: 4px; }
+        .kpi-card small { font-size: 8px; text-transform: uppercase; color: #64748b; font-weight: 700; display: block; }
+        .kpi-card div { font-size: 16px; font-weight: 800; color: var(--pwr-dark); margin-top: 2px; }
+        .perc { font-size: 10px; color: #64748b; font-weight: 400; }
+        .summary-text { background: #eff6ff; border: 1px solid var(--pwr-blue); padding: 8px; border-radius: 4px; margin-bottom: 15px; text-align: center; font-weight: 500; color: var(--pwr-dark); font-size: 12px; }
+
+        /* Split View: Table + Graph */
+        .split-view { display: flex; gap: 15px; align-items: flex-start; }
+        .left-panel { flex: 2; } /* Table takes 60-70% */
+        .right-panel { flex: 1; background: white; border: 1px solid var(--border); padding: 15px; border-radius: 4px; } /* Graph takes rest */
+
+        /* Table Compact */
+        .main-table { width: 100%; border-collapse: collapse; background: white; border: 1px solid var(--border); table-layout: fixed; font-size: 11px; }
+        .main-table th { background: #f1f5f9; padding: 6px; color: #334155; font-weight: 700; border: 1px solid var(--border); text-transform: uppercase; font-size: 9px; text-align: center; }
+        .main-table td { padding: 6px; border: 1px solid var(--border); cursor: pointer; text-align: center; vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .main-table tr.master-row:hover { background: #f8fafc; }
+        .main-table tr.active { background: #eff6ff !important; font-weight: 600; }
+
+        /* Details */
+        .detail-row { display: none; background: #fff; }
+        .detail-row.show { display: table-row; }
+        .inner-table { width: 100%; border-collapse: collapse; margin: 5px 0; }
+        .inner-table th { background: #f8fafc; padding: 4px; font-size: 8px; }
+        .inner-table td { padding: 5px; font-size: 10px; white-space: normal; }
+        .col-atividade { text-align: left !important; width: 50%; }
+        .val-exc { color: var(--red); font-weight: 700; }
+
+        /* CSS Bar Chart */
+        .chart-title { font-size: 12px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .bar-container { display: flex; align-items: center; margin-bottom: 8px; font-size: 11px; }
+        .bar-label { width: 30%; text-align: right; padding-right: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .bar-area { flex: 1; background: #f1f5f9; height: 18px; border-radius: 3px; position: relative; overflow: hidden; }
+        .bar-fill { height: 100%; background: var(--pwr-blue); border-radius: 3px; display: flex; align-items: center; padding-left: 5px; color: white; font-size: 9px; font-weight: 600; transition: width 1s; }
+        .bar-value { position: absolute; right: 5px; top: 2px; font-size: 9px; color: #64748b; }
+        
+        /* Badges */
+        .badge { padding: 1px 4px; border-radius: 2px; font-size: 8px; font-weight: 700; text-transform: uppercase; border: 1px solid #cbd5e1; }
+        .badge-yellow { background: #fef9c3; color: #854d0e; }
+        .badge-lider { background: #dbeafe; color: #1e40af; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-content">
+        <h1>Relatório de Horas excedentes - Semana 50</h1>
+    </div>
+</header>
+
+<div class="nav">
+    <div class="nav-btn active" onclick="switchTab('ag')">AGENDAS (> 0,25h)</div>
+    <div class="nav-btn" onclick="switchTab('db')">DÉBITO (> 1,0h)</div>
+</div>
+
+<div class="container">
+    <div id="ag" class="tab-content active">
+        <div class="summary-text">
+            Tivemos 106 registros auditados. Destes, 51 (48,1%) foram acima de 0,25h, somando 51,72h excedentes.
+        </div>
+        <div class="kpi-row">
+            <div class="kpi-card"><small>Registros</small><div>106</div></div>
+            <div class="kpi-card"><small>Consultores</small><div>22</div></div>
+            <div class="kpi-card" style="border-top-color: var(--yellow)"><small>Exc. Reg.</small><div>51</div></div>
+            <div class="kpi-card" style="border-top-color: var(--yellow)"><small>Exc. Cons.</small><div>17</div></div>
+            <div class="kpi-card" style="border-top-color: var(--red)"><small>Horas Exc.</small><div>51,72</div></div>
+        </div>
+    
+        
+        <div class="split-view">
+            <div class="left-panel">
+                <table class="main-table">
+                    <thead><tr><th style="width:30%">Consultor</th><th>Total Reg.</th><th>Excedentes</th><th>% Desvio</th><th>Total Exc.</th></tr></thead>
+                    <tbody id="tbody-ag"></tbody>
+                </table>
+            </div>
+            <div class="right-panel">
+                <div class="chart-title">Top 10 Ofensores (Horas Excedentes)</div>
+                <div id="chart-ag"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="db" class="tab-content">
+        <div class="summary-text">
+            Tivemos 34 registros auditados. Destes, 4 (11,8%) foram acima de 1,0h, somando 7,75h excedentes.
+        </div>
+        <div class="kpi-row">
+            <div class="kpi-card"><small>Registros</small><div>34</div></div>
+            <div class="kpi-card"><small>Consultores</small><div>27</div></div>
+            <div class="kpi-card" style="border-top-color: var(--yellow)"><small>Exc. Reg.</small><div>4</div></div>
+            <div class="kpi-card" style="border-top-color: var(--yellow)"><small>Exc. Cons.</small><div>3</div></div>
+            <div class="kpi-card" style="border-top-color: var(--red)"><small>Horas Exc.</small><div>7,75</div></div>
+        </div>
+    
+        
+        <div class="split-view">
+            <div class="left-panel">
+                <table class="main-table">
+                    <thead><tr><th style="width:30%">Consultor</th><th>Total Reg.</th><th>Excedentes</th><th>% Desvio</th><th>Total Exc.</th></tr></thead>
+                    <tbody id="tbody-db"></tbody>
+                </table>
+            </div>
+            <div class="right-panel">
+                <div class="chart-title">Top 10 Ofensores (Horas Excedentes)</div>
+                <div id="chart-db"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const dataAg = [{"name": "Gabriel Freitas", "tr": 4, "ex": 4, "perc": "100%", "h": 16.6, "logs": [{"d": "2025-12-08", "p": "Clínica Evolud - Tech", "a": "Apresentação do módulo de agendamentos na Clínica Evolud + lista de ajustes", "r": 6.0}, {"d": "2025-12-09", "p": "Clínica Evolud - Tech", "a": "Inclusão da agenda fixa do paciente: todos os agendamentos recorrentes ficam na agenda fixa do paciente", "r": 6.0}, {"d": "2025-12-09", "p": "Clínica Evolud - Tech", "a": "Ajuste nas mensagens de erro mais claras: mensagem impedindo de deletar especialidade vinculada a profissionais, tratamento de profissionais e pacientes deletados nos agendamentos", "r": 2.8}, {"d": "2025-12-10", "p": "Clínica Evolud - Tech", "a": "Correção dos fusos horários dos agendamentos e atualização dos agendamentos", "r": 2.8}]}, {"name": "Pedro Thiago", "tr": 3, "ex": 3, "perc": "100%", "h": 9.25, "logs": [{"d": "2025-12-12", "p": "Nexus - Manutenção da Plataforma", "a": "Correção do modulo de agenda", "r": 5.0}, {"d": "2025-12-09", "p": "Clínica Evolud - Tech", "a": "Apresentação do módulo de agendamento para homologação", "r": 3.5}, {"d": "2025-12-09", "p": "La Maison", "a": "Alinhamento e construção da integração com google agendas", "r": 1.5}]}, {"name": "Victor Gomes", "tr": 1, "ex": 1, "perc": "100%", "h": 5.75, "logs": [{"d": "2025-12-08", "p": "Dir. Sucesso do Cliente", "a": "Montando base para análise de debito semanal, espião e agendas.", "r": 6.0}]}, {"name": "Andresa Maciel", "tr": 7, "ex": 5, "perc": "71%", "h": 3.91, "logs": [{"d": "2025-12-12", "p": "Menu Brands", "a": "Ajustes e Alinhamento de ARM com lideranças + agenda", "r": 2.5}, {"d": "2025-12-08", "p": "Exxpert Tax", "a": "Alinhamento Exxpert + Agenda", "r": 1.5}, {"d": "2025-12-08", "p": "Austin", "a": "Agenda Austin", "r": 0.5}, {"d": "2025-12-08", "p": "Menu Brands", "a": "Agenda Menu", "r": 0.33}, {"d": "2025-12-08", "p": "PWR Gestão", "a": "Solicitando agendas", "r": 0.33}]}, {"name": "Higor Alves", "tr": 2, "ex": 1, "perc": "50%", "h": 3.75, "logs": [{"d": "2025-12-12", "p": "Cavicon - PE", "a": "Estruturação do Iniciativas e Tarefas + sprint semanal + agenda", "r": 4.0}]}, {"name": "Luciana Slauta", "tr": 5, "ex": 5, "perc": "100%", "h": 2.75, "logs": [{"d": "2025-12-08", "p": "Completta", "a": "Agenda Semanal.", "r": 0.8}, {"d": "2025-12-08", "p": "Gosto Mineiro", "a": "Agenda Semanal.", "r": 0.8}, {"d": "2025-12-08", "p": "Matmed", "a": "Agenda Semanal.", "r": 0.8}, {"d": "2025-12-08", "p": "Murano", "a": "Agenda Semanal.", "r": 0.8}, {"d": "2025-12-08", "p": "Tecidos & Cia", "a": "Agenda Semanal.", "r": 0.8}]}, {"name": "Mathaus Cruz", "tr": 3, "ex": 3, "perc": "100%", "h": 2.25, "logs": [{"d": "2025-12-08", "p": "Casa Di Campo", "a": "17:00 - 18:00 - Revisão de Agendas e demandas da Fase 3", "r": 1.0}, {"d": "2025-12-08", "p": "Gosto Mineiro", "a": "16:00 - 17:00 - Revisão de demandas e Agenda", "r": 1.0}, {"d": "2025-12-10", "p": "PWR Gestão", "a": "18:00 - 19:00\n- Ajuste da agenda", "r": 1.0}]}, {"name": "Bruno Uchoa", "tr": 8, "ex": 8, "perc": "100%", "h": 2.0, "logs": [{"d": "2025-12-08", "p": "Alpha Construtora", "a": "Alinhamento e elaboração da agenda semanal.", "r": 0.5}, {"d": "2025-12-08", "p": "Belém Transportes", "a": "Alinhamento e elaboração da agenda semanal.", "r": 0.5}, {"d": "2025-12-08", "p": "Federação Cearense de Futebol - Financeiro", "a": "Alinhamento e elaboração da agenda semanal.", "r": 0.5}, {"d": "2025-12-08", "p": "Grupo Sampaio", "a": "Alinhamento e elaboração da agenda semanal.", "r": 0.5}, {"d": "2025-12-08", "p": "La Maison", "a": "Alinhamento e elaboração da agenda semanal.", "r": 0.5}, {"d": "2025-12-08", "p": "Matheus Fernandes", "a": "Alinhamento e elaboração da agenda semanal.", "r": 0.5}, {"d": "2025-12-08", "p": "Picanha do Jonas", "a": "Alinhamento e elaboração da agenda semanal.", "r": 0.5}, {"d": "2025-12-08", "p": "Rota 85", "a": "Alinhamento e elaboração da agenda semanal.", "r": 0.5}]}, {"name": "Arthur Vidal", "tr": 8, "ex": 6, "perc": "75%", "h": 1.5, "logs": [{"d": "2025-12-08", "p": "Atra, Viva e Titan - ACG", "a": "Atualização e envio de agenda", "r": 0.5}, {"d": "2025-12-08", "p": "Bom Pastor - ACG", "a": "Atualização e envio de agenda", "r": 0.5}, {"d": "2025-12-08", "p": "Cerus Bank - ACG", "a": "Atualização e envio de agenda", "r": 0.5}, {"d": "2025-12-08", "p": "Charao", "a": "Atualização e envio de agenda", "r": 0.5}, {"d": "2025-12-08", "p": "Newlight - Acompanhamento ACG", "a": "Atualização e envio de agenda", "r": 0.5}, {"d": "2025-12-08", "p": "Óticas Marília - Acompanhamento ACG", "a": "Atualização e envio de agenda", "r": 0.5}]}, {"name": "Sabrina Silva", "tr": 5, "ex": 5, "perc": "100%", "h": 1.25, "logs": [{"d": "2025-12-08", "p": "Bom Pastor", "a": "Elaboração da agenda semanal", "r": 0.5}, {"d": "2025-12-08", "p": "Construtora Coral", "a": "Elaboração da agenda semanal", "r": 0.5}, {"d": "2025-12-08", "p": "Grupo Sampaio", "a": "Elaboração da agenda semanal", "r": 0.5}, {"d": "2025-12-08", "p": "Óticas Marília - Estruturação Organizacional", "a": "Elaboração da agenda semanal", "r": 0.5}, {"d": "2025-12-08", "p": "Teles e Falchi", "a": "Elaboração da agenda semanal", "r": 0.5}]}, {"name": "Giovanna Paes", "tr": 1, "ex": 1, "perc": "100%", "h": 0.75, "logs": [{"d": "2025-12-12", "p": "PWR Gestão", "a": "Agendas", "r": 1.0}]}, {"name": "Pedro Hilton", "tr": 3, "ex": 3, "perc": "100%", "h": 0.75, "logs": [{"d": "2025-12-08", "p": "Matheus Fernandes", "a": "Elaboração da agenda de atividades", "r": 0.5}, {"d": "2025-12-08", "p": "Norte Geradores", "a": "Elaboração da agenda de atividades", "r": 0.5}, {"d": "2025-12-08", "p": "Pro Car", "a": "Elaboração da agenda de atividades", "r": 0.5}]}, {"name": "Pedro Medina", "tr": 1, "ex": 1, "perc": "100%", "h": 0.5, "logs": [{"d": "2025-12-12", "p": "PWR Gestão", "a": "Resposta da PCO e agendas", "r": 0.75}]}, {"name": "Ana Letícia", "tr": 9, "ex": 1, "perc": "11%", "h": 0.25, "logs": [{"d": "2025-12-08", "p": "CLM Capital", "a": "elaboração de agendas", "r": 0.5}]}, {"name": "Felipe Vivona", "tr": 1, "ex": 1, "perc": "100%", "h": 0.25, "logs": [{"d": "2025-12-12", "p": "Cavicon - PE", "a": "Agenda", "r": 0.5}]}, {"name": "Manuelle Noronha", "tr": 14, "ex": 2, "perc": "14%", "h": 0.16000000000000003, "logs": [{"d": "2025-12-08", "p": "Família FBM - Patrimonial", "a": "Elaboração da agenda da semana. Envio para validação do gerente do projeto e, em seguida, para o cliente.", "r": 0.33}, {"d": "2025-12-08", "p": "JW Saraiva - ACG", "a": "Elaboração da agenda da semana. Envio para validação do gerente do projeto.", "r": 0.33}]}, {"name": "Juliana Melo", "tr": 2, "ex": 1, "perc": "50%", "h": 0.04999999999999999, "logs": [{"d": "2025-12-08", "p": "PWR Gestão", "a": "Agendas da semana", "r": 0.3}]}];
+    const dataDb = [{"name": "Victor Gomes", "tr": 3, "ex": 2, "perc": "66%", "h": 7.0, "logs": [{"d": "2025-12-08", "p": "Dir. Sucesso do Cliente", "a": "Montando base para análise de debito semanal, espião e agendas.", "r": 6.0}, {"d": "2025-12-09", "p": "Dir. Sucesso do Cliente", "a": "Fechamento débito semanal.", "r": 3.0}]}, {"name": "Luis Paulo", "tr": 2, "ex": 1, "perc": "50%", "h": 0.5, "logs": [{"d": "2025-12-08", "p": "Dir. Sucesso do Cliente", "a": "Análise Débitos com cliente espião", "r": 1.5}]}, {"name": "Vitória Nobre", "tr": 1, "ex": 1, "perc": "100%", "h": 0.25, "logs": [{"d": "2025-12-08", "p": "PWR Gestão", "a": "débito de horas", "r": 1.25}]}];
+
+    function renderPage(data, tbodyId, chartId, limit, crit) {
+        // Render Table
+        const tbody = document.getElementById(tbodyId);
+        tbody.innerHTML = '';
+        data.forEach((info, idx) => {
+            const rowId = `row-${tbodyId}-${idx}`;
+            tbody.innerHTML += `
+                <tr class="master-row" onclick="toggleRow('${rowId}', this)">
+                    <td style="font-weight:700;">${info.name}</td>
+                    <td>${info.tr}</td>
+                    <td>${info.ex}</td>
+                    <td>${info.perc}</td>
+                    <td class="val-exc">${info.h.toFixed(2)}h</td>
+                </tr>
+                <tr id="${rowId}" class="detail-row">
+                    <td colspan="5">
+                        <div class="detail-content">
+                            <table class="inner-table">
+                                <thead><tr><th style="width:12%">Data</th><th style="width:15%">Projeto</th><th class="col-atividade">Atividade</th><th style="width:8%">Real</th><th style="width:8%">Exc.</th><th style="width:10%">Status</th></tr></thead>
+                                <tbody>
+                                    ${info.logs.map(l => {
+                                        const excesso = (l.r - limit).toFixed(2);
+                                        const status = l.r > crit ? "Análise Liderança" : "Ajustado";
+                                        const badge = status === "Ajustado" ? "badge-yellow" : "badge-lider";
+                                        return `<tr><td>${l.d}</td><td>${l.p}</td><td class="col-atividade">${l.a}</td><td><b>${l.r}h</b></td><td class="val-exc">+${excesso}h</td><td><span class="badge ${badge}">${status}</span></td></tr>`;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </td>
+                </tr>`;
+        });
+
+        // Render Chart (Top 10)
+        const chartBox = document.getElementById(chartId);
+        const top10 = data.slice(0, 10);
+        const maxVal = Math.max(...top10.map(d => d.h));
+        
+        chartBox.innerHTML = top10.map(d => {
+            const width = (d.h / maxVal) * 100;
+            return `
+                <div class="bar-container">
+                    <div class="bar-label" title="${d.name}">${d.name}</div>
+                    <div class="bar-area">
+                        <div class="bar-fill" style="width: ${width}%">${d.h.toFixed(1)}h</div>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    function toggleRow(id, el) {
+        const row = document.getElementById(id);
+        const shown = row.classList.contains('show');
+        document.querySelectorAll('.detail-row').forEach(r => r.classList.remove('show'));
+        document.querySelectorAll('.master-row').forEach(r => r.classList.remove('active'));
+        if (!shown) { row.classList.add('show'); el.classList.add('active'); }
+    }
+
+    function switchTab(id) {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
+    // Init
+    renderPage(dataAg, 'tbody-ag', 'chart-ag', 0.25, 1.0);
+    renderPage(dataDb, 'tbody-db', 'chart-db', 1.0, 2.0);
+
+</script>
+</body>
+</html>
